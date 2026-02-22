@@ -1,0 +1,56 @@
+{
+  "name": "inline-edit",
+  "displayName": "Inline Edit",
+  "description": "Inline code editing powered by LLMs via OpenRouter",
+  "version": "0.0.1",
+  "publisher": "martinkovacs",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "inlineEdit.run",
+        "title": "Inline Edit: Edit Selection with AI"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "inlineEdit.run",
+        "key": "ctrl+i",
+        "mac": "cmd+i",
+        "when": "editorTextFocus"
+      }
+    ],
+    "configuration": {
+      "title": "Inline Edit",
+      "properties": {
+        "inlineEdit.openRouterApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Your OpenRouter API key"
+        },
+        "inlineEdit.model": {
+          "type": "string",
+          "default": "anthropic/claude-sonnet-4",
+          "description": "The model to use via OpenRouter (e.g. anthropic/claude-sonnet-4, openai/gpt-4o)"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.3"
+  }
+}
