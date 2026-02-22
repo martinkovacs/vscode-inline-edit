@@ -1,11 +1,11 @@
 import * as vscode from "vscode";
 import { callOpenRouter, OpenRouterMessage } from "./openrouter";
-import { DiffView } from "./diffView";
+import { InlineDiffView } from "./inlineDiff";
 
-let diffView: DiffView;
+let diffView: InlineDiffView;
 
 export function activate(context: vscode.ExtensionContext) {
-  diffView = new DiffView(context);
+  diffView = new InlineDiffView();
   context.subscriptions.push({ dispose: () => diffView.dispose() });
 
   context.subscriptions.push(
