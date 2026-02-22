@@ -17,6 +17,14 @@
       {
         "command": "inlineEdit.run",
         "title": "Inline Edit: Edit Selection with AI"
+      },
+      {
+        "command": "inlineEdit.accept",
+        "title": "Inline Edit: Accept Changes"
+      },
+      {
+        "command": "inlineEdit.reject",
+        "title": "Inline Edit: Reject Changes"
       }
     ],
     "keybindings": [
@@ -25,6 +33,16 @@
         "key": "ctrl+i",
         "mac": "cmd+i",
         "when": "editorTextFocus"
+      },
+      {
+        "command": "inlineEdit.accept",
+        "key": "enter",
+        "when": "inlineEdit.diffVisible"
+      },
+      {
+        "command": "inlineEdit.reject",
+        "key": "escape",
+        "when": "inlineEdit.diffVisible"
       }
     ],
     "configuration": {

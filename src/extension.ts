@@ -1,10 +1,15 @@
 import * as vscode from "vscode";
 import { callOpenRouter, OpenRouterMessage } from "./openrouter";
+import { DiffView } from "./diffView";
+
+let diffView: DiffView;
 
 export function activate(context: vscode.ExtensionContext) {
-  const disposable = vscode.commands.registerCommand(
-    "inlineEdit.run",
-    async () => {
+  diffView = new DiffView(context);
+  context.subscriptions.push({ dispose: () => diffView.dispose() });
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("inlineEdit.run", async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor) {
         vscode.window.showWarningMessage("No active editor");
@@ -40,16 +45,18 @@ export function activate(context: vscode.ExtensionContext) {
 
       const instruction = await vscode.window.showInputBox({
         prompt: "What should the AI do with the selected code?",
-        placeHolder: "e.g. Add error handling, refactor to async/await, implement bar feature...",
+        placeHolder:
+          "e.g. Add error handling, refactor to async/await, implement bar feature...",
       });
 
       if (!instruction) {
         return;
       }
 
-      const fileName = editor.document.fileName;
-      const languageId = editor.document.languageId;
-      const fullFileText = editor.document.getText();
+      const document = editor.document;
+      const fileName = document.fileName;
+      const languageId = document.languageId;
+      const fullFileText = document.getText();
 
       const messages = buildMessages(
         fullFileText,
@@ -81,9 +88,8 @@ export function activate(context: vscode.ExtensionContext) {
 
             const code = extractCode(result);
 
-            await editor.edit((editBuilder) => {
-              editBuilder.replace(selection, code);
-            });
+            // Show diff for review instead of applying directly
+            await diffView.show(document, selection, code);
           } catch (err: unknown) {
             if (err instanceof Error && err.message === "Request aborted") {
               return;
@@ -94,10 +100,16 @@ export function activate(context: vscode.ExtensionContext) {
           }
         }
       );
-    }
+    })
   );
 
-  context.subscriptions.push(disposable);
+  context.subscriptions.push(
+    vscode.commands.registerCommand("inlineEdit.accept", () => diffView.accept())
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("inlineEdit.reject", () => diffView.reject())
+  );
 }
 
 function buildMessages(
