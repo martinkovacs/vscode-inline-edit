@@ -1,12 +1,38 @@
 import * as vscode from "vscode";
 import { callOpenRouter, OpenRouterMessage } from "./openrouter";
 import { InlineDiffView } from "./inlineDiff";
+import { ChatGPTProvider } from "./chatgpt";
 
 let diffView: InlineDiffView;
+let chatgpt: ChatGPTProvider;
 
 export function activate(context: vscode.ExtensionContext) {
   diffView = new InlineDiffView();
+  chatgpt = new ChatGPTProvider(context.secrets);
+  chatgpt.initialize();
+
   context.subscriptions.push({ dispose: () => diffView.dispose() });
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("inlineEdit.chatgptLogin", async () => {
+      try {
+        await chatgpt.login();
+        vscode.window.showInformationMessage(
+          "Logged in to ChatGPT successfully!"
+        );
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        vscode.window.showErrorMessage(`ChatGPT login failed: ${msg}`);
+      }
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("inlineEdit.chatgptLogout", async () => {
+      await chatgpt.logout();
+      vscode.window.showInformationMessage("Logged out from ChatGPT.");
+    })
+  );
 
   context.subscriptions.push(
     vscode.commands.registerCommand("inlineEdit.run", async () => {
@@ -17,17 +43,30 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       const config = vscode.workspace.getConfiguration("inlineEdit");
-      const apiKey = config.get<string>("openRouterApiKey", "");
-      if (!apiKey) {
-        const action = await vscode.window.showErrorMessage(
-          "OpenRouter API key is not set.",
-          "Open Settings"
-        );
-        if (action === "Open Settings") {
-          vscode.commands.executeCommand(
-            "workbench.action.openSettings",
-            "inlineEdit.openRouterApiKey"
+      const provider = config.get<string>("provider", "openrouter");
+
+      if (provider === "openrouter") {
+        const apiKey = config.get<string>("openRouterApiKey", "");
+        if (!apiKey) {
+          const action = await vscode.window.showErrorMessage(
+            "OpenRouter API key is not set.",
+            "Open Settings"
           );
+          if (action === "Open Settings") {
+            vscode.commands.executeCommand(
+              "workbench.action.openSettings",
+              "inlineEdit.openRouterApiKey"
+            );
+          }
+          return;
+        }
+      } else if (provider === "chatgpt" && !chatgpt.loggedIn) {
+        const action = await vscode.window.showErrorMessage(
+          "Not logged in to ChatGPT.",
+          "Login"
+        );
+        if (action === "Login") {
+          vscode.commands.executeCommand("inlineEdit.chatgptLogin");
         }
         return;
       }
@@ -73,22 +112,29 @@ export function activate(context: vscode.ExtensionContext) {
           cancellable: true,
         },
         async (progress, token) => {
-          progress.report({ message: "Calling OpenRouter..." });
+          const label =
+            provider === "chatgpt" ? "ChatGPT" : "OpenRouter";
+          progress.report({ message: `Calling ${label}...` });
 
           const abortController = new AbortController();
           token.onCancellationRequested(() => abortController.abort());
 
           try {
-            const result = await callOpenRouter(
-              apiKey,
-              model,
-              messages,
-              abortController.signal
-            );
+            let result: string;
+
+            if (provider === "chatgpt") {
+              result = await chatgpt.call(messages, abortController.signal);
+            } else {
+              const apiKey = config.get<string>("openRouterApiKey", "")!;
+              result = await callOpenRouter(
+                apiKey,
+                model,
+                messages,
+                abortController.signal
+              );
+            }
 
             const code = extractCode(result);
-
-            // Show diff for review instead of applying directly
             await diffView.show(document, selection, code);
           } catch (err: unknown) {
             if (err instanceof Error && err.message === "Request aborted") {
