@@ -27,6 +27,14 @@
         "title": "Inline Edit: Reject Changes"
       },
       {
+        "command": "inlineEdit.anthropicLogin",
+        "title": "Inline Edit: Login with Claude (Anthropic OAuth)"
+      },
+      {
+        "command": "inlineEdit.anthropicLogout",
+        "title": "Inline Edit: Logout from Claude (Anthropic)"
+      },
+      {
         "command": "inlineEdit.chatgptLogin",
         "title": "Inline Edit: Login with ChatGPT"
       },
@@ -60,7 +68,7 @@
           "type": "string",
           "enum": ["openrouter", "anthropic", "chatgpt"],
           "default": "openrouter",
-          "description": "Which provider to use. 'openrouter' uses your OpenRouter API key, 'anthropic' calls the Anthropic API directly, 'chatgpt' uses your ChatGPT Plus subscription via OAuth login."
+          "description": "Which provider to use. 'openrouter' uses your OpenRouter API key, 'anthropic' calls the Anthropic API directly (API key or OAuth login), 'chatgpt' uses your ChatGPT Plus subscription via OAuth login."
         },
         "inlineEdit.openRouterApiKey": {
           "type": "string",
@@ -70,7 +78,7 @@
         "inlineEdit.anthropicApiKey": {
           "type": "string",
           "default": "",
-          "description": "Your Anthropic API key (only used when provider is 'anthropic'). Get one at https://console.anthropic.com/"
+          "description": "Your Anthropic API key (optional — you can also use OAuth login via the 'Login with Claude' command)"
         },
         "inlineEdit.model": {
           "type": "string",

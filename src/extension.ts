@@ -1,19 +1,45 @@
 import * as vscode from "vscode";
 import { callOpenRouter, OpenRouterMessage } from "./openrouter";
-import { callAnthropic } from "./anthropic";
+import { callAnthropic, AnthropicOAuthProvider } from "./anthropic";
 import { InlineDiffView } from "./inlineDiff";
 import { ChatGPTProvider } from "./chatgpt";
 
 let diffView: InlineDiffView;
+let anthropicOAuth: AnthropicOAuthProvider;
 let chatgpt: ChatGPTProvider;
 
 export function activate(context: vscode.ExtensionContext) {
   diffView = new InlineDiffView();
+  anthropicOAuth = new AnthropicOAuthProvider(context.secrets);
+  anthropicOAuth.initialize();
   chatgpt = new ChatGPTProvider(context.secrets);
   chatgpt.initialize();
 
   context.subscriptions.push({ dispose: () => diffView.dispose() });
 
+  // Anthropic OAuth commands
+  context.subscriptions.push(
+    vscode.commands.registerCommand("inlineEdit.anthropicLogin", async () => {
+      try {
+        await anthropicOAuth.login();
+        vscode.window.showInformationMessage(
+          "Logged in to Claude (Anthropic) successfully!"
+        );
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : "Unknown error";
+        vscode.window.showErrorMessage(`Anthropic login failed: ${msg}`);
+      }
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand("inlineEdit.anthropicLogout", async () => {
+      await anthropicOAuth.logout();
+      vscode.window.showInformationMessage("Logged out from Claude (Anthropic).");
+    })
+  );
+
+  // ChatGPT OAuth commands
   context.subscriptions.push(
     vscode.commands.registerCommand("inlineEdit.chatgptLogin", async () => {
       try {
@@ -63,16 +89,19 @@ export function activate(context: vscode.ExtensionContext) {
         }
       } else if (provider === "anthropic") {
         const apiKey = config.get<string>("anthropicApiKey", "");
-        if (!apiKey) {
+        if (!apiKey && !anthropicOAuth.loggedIn) {
           const action = await vscode.window.showErrorMessage(
-            "Anthropic API key is not set.",
-            "Open Settings"
+            "Anthropic: set an API key or log in with OAuth.",
+            "Open Settings",
+            "Login with Claude"
           );
           if (action === "Open Settings") {
             vscode.commands.executeCommand(
               "workbench.action.openSettings",
               "inlineEdit.anthropicApiKey"
             );
+          } else if (action === "Login with Claude") {
+            vscode.commands.executeCommand("inlineEdit.anthropicLogin");
           }
           return;
         }
@@ -146,9 +175,12 @@ export function activate(context: vscode.ExtensionContext) {
             if (provider === "chatgpt") {
               result = await chatgpt.call(messages, abortController.signal);
             } else if (provider === "anthropic") {
-              const apiKey = config.get<string>("anthropicApiKey", "")!;
+              const apiKey = config.get<string>("anthropicApiKey", "");
+              const auth = apiKey
+                ? { type: "apikey" as const, key: apiKey }
+                : { type: "oauth" as const, token: anthropicOAuth.token! };
               result = await callAnthropic(
-                apiKey,
+                auth,
                 model,
                 messages,
                 abortController.signal
