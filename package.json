@@ -58,19 +58,24 @@
       "properties": {
         "inlineEdit.provider": {
           "type": "string",
-          "enum": ["openrouter", "chatgpt"],
+          "enum": ["openrouter", "anthropic", "chatgpt"],
           "default": "openrouter",
-          "description": "Which provider to use. 'openrouter' uses your API key, 'chatgpt' uses your ChatGPT Plus subscription via OAuth login."
+          "description": "Which provider to use. 'openrouter' uses your OpenRouter API key, 'anthropic' calls the Anthropic API directly, 'chatgpt' uses your ChatGPT Plus subscription via OAuth login."
         },
         "inlineEdit.openRouterApiKey": {
           "type": "string",
           "default": "",
           "description": "Your OpenRouter API key (only used when provider is 'openrouter')"
         },
+        "inlineEdit.anthropicApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Your Anthropic API key (only used when provider is 'anthropic'). Get one at https://console.anthropic.com/"
+        },
         "inlineEdit.model": {
           "type": "string",
           "default": "anthropic/claude-sonnet-4",
-          "description": "OpenRouter model ID (e.g. anthropic/claude-sonnet-4, openai/gpt-4o, google/gemini-2.5-pro). Only used when provider is 'openrouter'."
+          "description": "Model to use. For OpenRouter: any model ID (e.g. anthropic/claude-sonnet-4, openai/gpt-4o). For Anthropic: a Claude model ID (e.g. claude-sonnet-4-20250514). ChatGPT always uses gpt-5."
         }
       }
     }

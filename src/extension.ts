@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { callOpenRouter, OpenRouterMessage } from "./openrouter";
+import { callAnthropic } from "./anthropic";
 import { InlineDiffView } from "./inlineDiff";
 import { ChatGPTProvider } from "./chatgpt";
 
@@ -60,6 +61,21 @@ export function activate(context: vscode.ExtensionContext) {
           }
           return;
         }
+      } else if (provider === "anthropic") {
+        const apiKey = config.get<string>("anthropicApiKey", "");
+        if (!apiKey) {
+          const action = await vscode.window.showErrorMessage(
+            "Anthropic API key is not set.",
+            "Open Settings"
+          );
+          if (action === "Open Settings") {
+            vscode.commands.executeCommand(
+              "workbench.action.openSettings",
+              "inlineEdit.anthropicApiKey"
+            );
+          }
+          return;
+        }
       } else if (provider === "chatgpt" && !chatgpt.loggedIn) {
         const action = await vscode.window.showErrorMessage(
           "Not logged in to ChatGPT.",
@@ -112,9 +128,14 @@ export function activate(context: vscode.ExtensionContext) {
           cancellable: true,
         },
         async (progress, token) => {
-          const label =
-            provider === "chatgpt" ? "ChatGPT" : "OpenRouter";
-          progress.report({ message: `Calling ${label}...` });
+          const labels: Record<string, string> = {
+            openrouter: "OpenRouter",
+            anthropic: "Anthropic",
+            chatgpt: "ChatGPT",
+          };
+          progress.report({
+            message: `Calling ${labels[provider] ?? provider}...`,
+          });
 
           const abortController = new AbortController();
           token.onCancellationRequested(() => abortController.abort());
@@ -124,6 +145,14 @@ export function activate(context: vscode.ExtensionContext) {
 
             if (provider === "chatgpt") {
               result = await chatgpt.call(messages, abortController.signal);
+            } else if (provider === "anthropic") {
+              const apiKey = config.get<string>("anthropicApiKey", "")!;
+              result = await callAnthropic(
+                apiKey,
+                model,
+                messages,
+                abortController.signal
+              );
             } else {
               const apiKey = config.get<string>("openRouterApiKey", "")!;
               result = await callOpenRouter(
